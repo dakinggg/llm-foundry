@@ -522,6 +522,7 @@ def main(cfg: DictConfig) -> Trainer:
         dist_timeout=train_cfg.dist_timeout,
         profiler=profiler,
         compile_config=compile_config,
+        accumulate_train_batch_on_tokens=True,
     )
 
     if train_cfg.log_config:
