@@ -63,13 +63,16 @@ class LossPerpVsContextLengthLogger(Callback):
             )
 
     def after_backward(self, state: State, logger: Logger) -> None:
+        print("AFTER BACKWARD")
         if state.timestamp.batch.value % self.compute_batch_interval == 0:
+            print("INSIDE")
             sequence_id = state.batch['sequence_id'
                                      ] if 'sequence_id' in state.batch else None
             labels = state.batch['labels']
             if state.model.shift_labels:
                 labels[:, :-1] = labels[:, 1:].detach().clone()
                 labels[:, -1] = -100
+            print("SHIFTED")
             seq_parallel_world_size = getattr(
                 state.model.model.transformer,
                 'seq_parallel_world_size',
@@ -98,6 +101,7 @@ class LossPerpVsContextLengthLogger(Callback):
                 seq_parallel_world_size,
                 seq_parallel_rank,
             )
+            print("PREPROCESSED")
 
             self.loss_perp_v_len.update(
                 labels,
@@ -105,6 +109,8 @@ class LossPerpVsContextLengthLogger(Callback):
                 sequence_id,
                 state.model.loss_fn,
             )
+            print("UPDATED")
+        print("DONE")
 
     def batch_end(self, state: State, logger: Logger) -> None:
         if (
@@ -215,6 +221,7 @@ class LossPerpVLen(Metric):
             sequence_id (torch.Tensor | None): The sequence ids for tokens.
             loss_fn (Any): The cross entropy loss to use.
         """
+        print("UPDATE")
         valid_labels_mask = torch.where(
             labels != self.ignore_index,
             torch.ones_like(labels),
@@ -308,6 +315,7 @@ class LossPerpVLen(Metric):
             self.sum_loss_seq_id += torch.sum(loss, dim=(0, 1))
             self.sum_perplexity_seq_id += torch.sum(perplexity, dim=(0, 1))
             self.sum_length_seq_id += torch.sum(mask, dim=(0, 1))
+        print("DONE")
 
     def compute(self) -> Dict[str, torch.Tensor]:
         """Aggregate the state over all processes to compute the metric.
@@ -315,31 +323,36 @@ class LossPerpVLen(Metric):
         Returns:
             loss: The loss averaged across all batches as a :class:`~torch.Tensor`.
         """
+        print("COMPUTE")
         # Return average loss over entire dataset
         sum_perplexity = torch.where(
             self.sum_length != 0,
             self.sum_perplexity,
             -1,
         )
+        print("PPL")
         sum_loss = torch.where(self.sum_length != 0, self.sum_loss, -1)
         sum_length = torch.where(self.sum_length != 0, self.sum_length, 1)
+        print("SUM1")
 
         sum_perplexity_seq_id = torch.where(
             self.sum_length_seq_id != 0,
             self.sum_perplexity_seq_id,
             -1,
         )
+        print("SUM2")
         sum_loss_seq_id = torch.where(
             self.sum_length_seq_id != 0,
             self.sum_loss_seq_id,
             -1,
         )
+        print("SUM3")
         sum_length_seq_id = torch.where(
             self.sum_length_seq_id != 0,
             self.sum_length_seq_id,
             1,
         )
-
+        print("DONE")
         return {
             'mean_loss_v_len':
                 sum_loss / sum_length,
