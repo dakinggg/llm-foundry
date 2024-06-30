@@ -231,12 +231,17 @@ class LossPerpVLen(Metric):
             torch.ones_like(labels),
             torch.zeros_like(labels),
         )
+        print("MASK")
         bsz, seq_len = labels.shape
         loss = loss_fn(logits.view(bsz * seq_len, -1), labels.view(-1))
+        print("LOSS")
         loss = loss.view(bsz, seq_len)
+        print("VIEW")
         perplexity = torch.exp(loss)
+        print("EXP")
 
         if self.sum_loss.numel() == 0:
+            print("ZEROING")
             self.sum_loss = torch.zeros(  # type: ignore
                 seq_len,
                 device=loss.device,
@@ -267,54 +272,71 @@ class LossPerpVLen(Metric):
                 device=loss.device,
                 dtype=torch.long,
             )
+            print("ZEROD")
 
         self.sum_loss += torch.sum(loss, dim=(0))
+        print("SUMMED")
         self.sum_perplexity += torch.sum(perplexity, dim=(0))
+        print("SUMMED2")
         self.sum_length += valid_labels_mask.sum(dim=0)
+        print("SUMMED3")
 
         if sequence_id is not None:
+            print("SEQ ID")
             seq_id_expanded = torch.nn.functional.one_hot(
                 sequence_id,
             ).transpose(-1, -2)
+            print("EXPANDED")
             seq_lens = seq_id_expanded.sum(dim=-1)
             max_num_seq = seq_lens.shape[1]
             seq_tok_ids = torch.arange(seq_len, device=sequence_id.device)[
                 None, None, :].expand(bsz, max_num_seq, -1)
+            print("SEQ TID")
             mask = seq_tok_ids < seq_lens[:, :, None]
+            print("MASK")
             seq_len_offsets = torch.nn.functional.pad(
                 seq_lens.cumsum(dim=1)[:, :-1],
                 (1, 0),
                 value=0,
             )
+            print("OFFSET")
             seq_tok_ids = seq_tok_ids + seq_len_offsets[:, :, None]
+            print("OFFSET2")
             seq_tok_ids = torch.where(
                 mask,
                 seq_tok_ids,
                 torch.zeros_like(seq_tok_ids),
             )
+            print("WHERE")
 
             loss = loss[:, None, :].expand(-1, max_num_seq, -1)
+            print("EXPANDED2")
             perplexity = perplexity[:, None, :].expand(-1, max_num_seq, -1)
+            print("EXPANDED3")
             valid_labels_mask = valid_labels_mask[:, None, :].expand(
                 -1,
                 max_num_seq,
                 -1,
             )
+            print("EXPANDED4")
             loss = torch.where(
                 mask,
                 torch.gather(input=loss, dim=2, index=seq_tok_ids),
                 torch.zeros_like(loss),
             )
+            print("WHERE2")
             perplexity = torch.where(
                 mask,
                 torch.gather(input=perplexity, dim=2, index=seq_tok_ids),
                 torch.zeros_like(perplexity),
             )
+            print("WHERE3")
             mask = torch.where(
                 mask,
                 torch.gather(input=valid_labels_mask, dim=2, index=seq_tok_ids),
                 torch.zeros_like(valid_labels_mask),
             )
+            print("WHERE4")
 
             self.sum_loss_seq_id += torch.sum(loss, dim=(0, 1))
             self.sum_perplexity_seq_id += torch.sum(perplexity, dim=(0, 1))
