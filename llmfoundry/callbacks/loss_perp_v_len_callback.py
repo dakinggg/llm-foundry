@@ -283,6 +283,7 @@ class LossPerpVLen(Metric):
 
         if sequence_id is not None:
             print("SEQ ID")
+            print(sequence_id)
             seq_id_expanded = torch.nn.functional.one_hot(
                 sequence_id,
             ).transpose(-1, -2)
