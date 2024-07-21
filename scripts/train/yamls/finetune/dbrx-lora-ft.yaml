@@ -130,6 +130,13 @@ callbacks:
     save_folder: ./{run_name}/checkpoints
     save_interval: 1dur
   runtime_estimator: {}
+  # Save Hugging Face formatted checkpoints
+  # hf_checkpointer:
+  #   overwrite: true
+  #   precision: bfloat16
+  #   save_folder: ${save_folder}
+  #   save_interval: 1dur
+
 # Checkpoint to local filesystem or remote object store
 # save_interval: 5000ba
 # save_num_checkpoints_to_keep: 1  # Important, this cleans up checkpoints saved to DISK

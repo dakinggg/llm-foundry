@@ -139,6 +139,12 @@ parameters:
     lr_monitor: {}
     memory_monitor: {}
     runtime_estimator: {}
+    # Save Hugging Face formatted checkpoints
+    # hf_checkpointer:
+    #   overwrite: true
+    #   precision: bfloat16
+    #   save_folder: ${save_folder}
+    #   save_interval: 1dur
 
   load_weights_only: true  # Only load the weights, not the optimizer state, LR schedule, etc
 

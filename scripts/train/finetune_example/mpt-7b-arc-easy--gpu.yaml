@@ -104,6 +104,12 @@ callbacks:
   lr_monitor: {}
   memory_monitor: {}
   runtime_estimator: {}
+  # Save Hugging Face formatted checkpoints
+  # hf_checkpointer:
+  #   overwrite: true
+  #   precision: bfloat16
+  #   save_folder: ${save_folder}
+  #   save_interval: 1dur
 
 # loggers:
 #   wandb: {}
