@@ -435,6 +435,10 @@ def generic_param_init_fn_(
             f'Expected init_div_is_residual to be boolean or numeric, got {init_div_is_residual}',
         )
 
+    # This for loop will loop over all the registered module_init_fns in no particular order.
+    # The first module_init_fn that initializes the module will break the loop.
+    # If no module_init_fn initializes the module, an error will be raised, as it means
+    # the parameters for that module are not initialized and model training will not work.
     all_module_init_fns = [
         module_init_fns.get(name) for name in module_init_fns.get_all()
     ]
@@ -455,7 +459,7 @@ def generic_param_init_fn_(
 
     if not did_init:
         for _ in module.parameters(recurse=False):
-            # raise error if uninitialized module has any parameters
+            # Raise error if uninitialized module has any parameters
             raise NotImplementedError(
                 f'{module.__class__.__name__} parameters are not initialized by any of the registered module_init_fns. '
                 +
