@@ -237,18 +237,11 @@ composer train/train.py \
   eval_interval=0 \
   save_folder=mpt-125m
 
-# Convert the model to HuggingFace format
-python inference/convert_composer_to_hf.py \
-  --composer_path mpt-125m/ep0-ba10-rank0.pt \
-  --hf_output_path mpt-125m-hf \
-  --output_precision bf16 \
-  # --hf_repo_for_upload user-org/repo-name
-
 # Evaluate the model on a subset of tasks
 composer eval/eval.py \
   eval/yamls/hf_eval.yaml \
   icl_tasks=eval/yamls/copa.yaml \
-  model_name_or_path=mpt-125m-hf
+  model_name_or_path=mpt-125m/huggingface/ba10
 
 # Generate responses to prompts
 python inference/hf_generate.py \
