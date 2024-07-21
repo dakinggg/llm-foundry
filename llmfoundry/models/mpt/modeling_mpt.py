@@ -349,6 +349,11 @@ class MPTModel(MPTPreTrainedModel):
 
         self.learned_pos_emb = config.learned_pos_emb
 
+        if config.init_device == 'cpu':
+            log.info(
+                f'We recommend using config.init_device="meta" with Composer + FSDP for faster initialization.',
+            )
+
         if config.init_device == 'mixed':
             if dist.get_local_rank() == 0:
                 config.init_device = 'cpu'
@@ -408,9 +413,6 @@ class MPTModel(MPTPreTrainedModel):
             )
 
         if config.init_device != 'meta':
-            log.info(
-                f'We recommend using config.init_device="meta" with Composer + FSDP for faster initialization.',
-            )
             self.apply(self.param_init_fn)
 
         self.is_causal = True
@@ -979,8 +981,15 @@ class MPTModel(MPTPreTrainedModel):
         """
         return x.size(1)
 
-    # Param Initialization, needed for device='meta' fast initialization
     def param_init_fn(self, module: nn.Module) -> None:
+        """Function to initialize the parameters of a module
+
+        This function will be either be called in the constructor (if not using meta init),
+        or during FSDP wrapping by Composer if using meta init.
+
+        Args:
+            module (nn.Module): The module to initialize
+        """
         init_fn_name = self.config.init_config['name']
         param_init_fns.get(init_fn_name)(
             module=module,
@@ -1151,8 +1160,15 @@ class MPTForCausalLM(MPTPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    # Param Initialization, needed for device='meta' fast initialization
     def param_init_fn(self, module: nn.Module) -> None:
+        """Function to initialize the parameters of a module
+
+        This function will be either be called in the constructor (if not using meta init),
+        or during FSDP wrapping by Composer if using meta init.
+
+        Args:
+            module (nn.Module): The module to initialize
+        """
         init_fn_name = self.config.init_config['name']
         param_init_fns.get(init_fn_name)(
             module=module,
@@ -1165,7 +1181,6 @@ class MPTForCausalLM(MPTPreTrainedModel):
     def fsdp_wrap_fn(self, module: nn.Module) -> bool:
         return _fsdp_wrap_fn(self, module)
 
-    # Activation Checkpointing
     def activation_checkpointing_fn(self, module: nn.Module) -> bool:
         """The MPT activation checkpointing (act ckpt) function.
 
