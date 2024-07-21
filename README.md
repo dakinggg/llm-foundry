@@ -241,7 +241,7 @@ composer train/train.py \
 composer eval/eval.py \
   eval/yamls/hf_eval.yaml \
   icl_tasks=eval/yamls/copa.yaml \
-  model_name_or_path=mpt-125m/huggingface/ba10
+  variables.model_name_or_path=mpt-125m/huggingface/ba10
 
 # Generate responses to prompts
 python inference/hf_generate.py \
