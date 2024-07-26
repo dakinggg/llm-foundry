@@ -381,6 +381,7 @@ def auto_packing_ratio(
 
     # Select the minimum packing ratio across all ranks.
     if dist.is_available() and dist.is_initialized():
+        log.debug("Distributing packing ratio")
         device = get_device(None)
         packing_ratio_tensor = device.tensor_to_device(
             torch.tensor(packing_ratio),
@@ -391,6 +392,7 @@ def auto_packing_ratio(
     # Restore rng state.
     reproducibility.load_rng_state(rng_state)
 
+    log.info("Returning from auto packing ratio selection")
     return packing_ratio
 
 
@@ -523,7 +525,7 @@ def profile_packing(
     for i, (packing_ratio,
             raw_batch_size) in enumerate(zip(packing_ratios, raw_batch_sizes)):
         log.debug(
-            f'Progress [{i}/{total_packing_ratios}]: Profiling packing ratio {packing_ratio}',
+            f'Progress [{i}/{total_packing_ratios-1}]: Profiling packing ratio {packing_ratio}',
         )
         padding, waste = profile(raw_batch_size)
         yield (packing_ratio, padding, waste)
