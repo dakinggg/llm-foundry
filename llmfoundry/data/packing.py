@@ -524,6 +524,9 @@ def profile_packing(
                     current_sizes,
                 )
 
+                current_batch = []
+                current_sizes = []
+
             if packer.n_packed_examples == 0:
                 log.debug(
                     'No examples packed during profiling. Dataset is smaller than device batch size.',
