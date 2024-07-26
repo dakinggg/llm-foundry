@@ -357,27 +357,24 @@ def auto_packing_ratio(
     if max_seq_len <= 100:
         return 1
 
-    if dist.get_local_rank() == 0:
-        min_ratio = 1
-        max_ratio = max_seq_len / 100
-        profiling_results = profile_packing(
-            dataloader_cfg=dataloader_cfg,
-            tokenizer=tokenizer,
-            min_ratio=min_ratio,
-            max_ratio=max_ratio,
-            num_packing_ratios=num_packing_ratios,
-            device_batch_size=device_batch_size,
-        )
+    min_ratio = 1
+    max_ratio = max_seq_len / 100
+    profiling_results = profile_packing(
+        dataloader_cfg=dataloader_cfg,
+        tokenizer=tokenizer,
+        min_ratio=min_ratio,
+        max_ratio=max_ratio,
+        num_packing_ratios=num_packing_ratios,
+        device_batch_size=device_batch_size,
+    )
 
-        # Obtain the maximum packing_ratio/minimum padding that has no waste.
-        # profiling_results are sorted from smallest to largest packing_ratio.
-        packing_ratio = 1
-        for packing_ratio_candidate, _, waste in profiling_results:
-            if waste is None or waste > 0:
-                break
-            packing_ratio = packing_ratio_candidate
-    else:
-        packing_ratio = 100000
+    # Obtain the maximum packing_ratio/minimum padding that has no waste.
+    # profiling_results are sorted from smallest to largest packing_ratio.
+    packing_ratio = 1
+    for packing_ratio_candidate, _, waste in profiling_results:
+        if waste is None or waste > 0:
+            break
+        packing_ratio = packing_ratio_candidate
 
     # Select the minimum packing ratio across all ranks.
     if dist.is_available() and dist.is_initialized():
@@ -480,52 +477,56 @@ def profile_packing(
     train_dataloader = train_dataspec.dataloader
 
     # Get a bunch of raw examples
-    big_batch = next(iter(train_dataloader))
+    if dist.get_local_rank() == 0:
+        big_batch = next(iter(train_dataloader))
 
-    # Cut everything down to size
-    sizes, trimmed_examples = _trim_batch(big_batch)
+        # Cut everything down to size
+        sizes, trimmed_examples = _trim_batch(big_batch)
 
-    def profile(raw_batch_size: int) -> Tuple[Optional[float], Optional[float]]:
-        # Copy trimmed examples so that the dicts are not shared between profiling runs.
-        trimmed_examples_copy = [te.copy() for te in trimmed_examples]
+        def profile(raw_batch_size: int) -> Tuple[Optional[float], Optional[float]]:
+            # Copy trimmed examples so that the dicts are not shared between profiling runs.
+            trimmed_examples_copy = [te.copy() for te in trimmed_examples]
 
-        # Create the packing collator.
-        packer = BinPackCollator(
-            collator=lambda x: x,
-            target_batch_size=device_batch_size,
-            max_seq_len=max_seq_len,
-            pad_token_id=0,  # <-- Doesn't need to be correct for profiling
-            padding_side='left',  # <-- Doesn't need to be correct for profiling
-            max_leftover_bins_to_keep=max_leftovers_to_keep,
-        )
-
-        # Simulate feeding the packing collator a bunch of data
-        for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
-            batch = trimmed_examples_copy[idx:idx + raw_batch_size]
-            if len(batch) < device_batch_size:
-                continue
-            packer._pack_trimmed_examples(
-                batch,
-                sizes[idx:idx + raw_batch_size],
+            # Create the packing collator.
+            packer = BinPackCollator(
+                collator=lambda x: x,
+                target_batch_size=device_batch_size,
+                max_seq_len=max_seq_len,
+                pad_token_id=0,  # <-- Doesn't need to be correct for profiling
+                padding_side='left',  # <-- Doesn't need to be correct for profiling
+                max_leftover_bins_to_keep=max_leftovers_to_keep,
             )
 
-        if packer.n_packed_examples == 0:
+            # Simulate feeding the packing collator a bunch of data
+            for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
+                batch = trimmed_examples_copy[idx:idx + raw_batch_size]
+                if len(batch) < device_batch_size:
+                    continue
+                packer._pack_trimmed_examples(
+                    batch,
+                    sizes[idx:idx + raw_batch_size],
+                )
+
+            if packer.n_packed_examples == 0:
+                log.debug(
+                    'No examples packed during profiling. Dataset is smaller than device batch size.',
+                )
+                return None, None
+
+            # Return the padding and waste stats over that bunch of data
+            padding_percent = 100 * (1 - packer.efficiency)
+            waste_percent = 100 * packer.waste
+            return padding_percent, waste_percent
+
+        log.debug('Profiling packing ratios')
+        total_packing_ratios = min(len(packing_ratios), len(raw_batch_sizes))
+        for i, (packing_ratio,
+                raw_batch_size) in enumerate(zip(packing_ratios, raw_batch_sizes)):
             log.debug(
-                'No examples packed during profiling. Dataset is smaller than device batch size.',
+                f'Progress [{i}/{total_packing_ratios-1}]: Profiling packing ratio {packing_ratio}',
             )
-            return None, None
-
-        # Return the padding and waste stats over that bunch of data
-        padding_percent = 100 * (1 - packer.efficiency)
-        waste_percent = 100 * packer.waste
-        return padding_percent, waste_percent
-
-    log.debug('Profiling packing ratios')
-    total_packing_ratios = min(len(packing_ratios), len(raw_batch_sizes))
-    for i, (packing_ratio,
-            raw_batch_size) in enumerate(zip(packing_ratios, raw_batch_sizes)):
-        log.debug(
-            f'Progress [{i}/{total_packing_ratios-1}]: Profiling packing ratio {packing_ratio}',
-        )
-        padding, waste = profile(raw_batch_size)
-        yield (packing_ratio, padding, waste)
+            padding, waste = profile(raw_batch_size)
+            yield (packing_ratio, padding, waste)
+    else:
+        for _ in range(len(packing_ratios)):
+            yield (100000, 10000, 10000)
