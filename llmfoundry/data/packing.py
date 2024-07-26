@@ -468,9 +468,12 @@ def profile_packing(
             packing_ratios.append(packing_ratio)
             raw_batch_sizes.append(raw_batch_size)
 
+    print(packing_ratios)
+    print(raw_batch_sizes)
     n_profile_examples = max(raw_batch_sizes) * 100
     # batch_size = n_profile_examples // 100
     # n_iters = n_profile_examples // batch_size
+    print(n_profile_examples)
 
     train_dataspec = build_dataloader(
         dataloader_cfg,
@@ -511,7 +514,6 @@ def profile_packing(
             # Simulate feeding the packing collator a bunch of data
             # for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
             for idx, (size, trimmed_example) in enumerate(trimmed_iter):
-                print(idx)
                 if len(current_batch) < raw_batch_size:
                     current_batch.append(trimmed_example)
                     current_sizes.append(size)
@@ -519,6 +521,8 @@ def profile_packing(
 
                 if len(current_batch) < device_batch_size:
                     continue
+
+                print(idx)
                 packer._pack_trimmed_examples(
                     current_batch,
                     current_sizes,
