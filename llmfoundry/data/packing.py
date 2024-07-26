@@ -368,16 +368,14 @@ def auto_packing_ratio(
             num_packing_ratios=num_packing_ratios,
             device_batch_size=device_batch_size,
         )
-    
-    dist.barrier()
 
-    # Obtain the maximum packing_ratio/minimum padding that has no waste.
-    # profiling_results are sorted from smallest to largest packing_ratio.
-    packing_ratio = 1
-    for packing_ratio_candidate, _, waste in profiling_results:
-        if waste is None or waste > 0:
-            break
-        packing_ratio = packing_ratio_candidate
+        # Obtain the maximum packing_ratio/minimum padding that has no waste.
+        # profiling_results are sorted from smallest to largest packing_ratio.
+        packing_ratio = 1
+        for packing_ratio_candidate, _, waste in profiling_results:
+            if waste is None or waste > 0:
+                break
+            packing_ratio = packing_ratio_candidate
 
     # Select the minimum packing ratio across all ranks.
     # if dist.is_available() and dist.is_initialized():
@@ -387,6 +385,8 @@ def auto_packing_ratio(
     #     )
     #     dist.all_reduce(packing_ratio_tensor, reduce_operation='MIN')
     #     packing_ratio = packing_ratio_tensor.item()
+
+    dist.barrier()
 
     # Restore rng state.
     reproducibility.load_rng_state(rng_state)
