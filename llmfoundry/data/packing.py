@@ -377,7 +377,7 @@ def auto_packing_ratio(
                 break
             packing_ratio = packing_ratio_candidate
     else:
-        packing_ratio = 10000000000
+        packing_ratio = 100000
 
     # Select the minimum packing ratio across all ranks.
     if dist.is_available() and dist.is_initialized():
