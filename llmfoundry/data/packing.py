@@ -510,17 +510,17 @@ def profile_packing(
             current_sizes = []
             # Simulate feeding the packing collator a bunch of data
             # for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
-            for (size, trimmed_example) in trimmed_iter:
+            for idx, (size, trimmed_example) in enumerate(trimmed_iter):
+                print(idx)
                 if len(current_batch) < raw_batch_size:
                     current_batch.append(trimmed_example)
                     current_sizes.append(size)
                     continue
 
-                batch = current_batch
-                if len(batch) < device_batch_size:
+                if len(current_batch) < device_batch_size:
                     continue
                 packer._pack_trimmed_examples(
-                    batch,
+                    current_batch,
                     current_sizes,
                 )
 
