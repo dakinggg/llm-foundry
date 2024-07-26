@@ -126,8 +126,8 @@ class BinPackCollator:
 
 
 def _trim_batch(
-    batches: List[Dict[str, torch.Tensor]],
-) -> Tuple[List[int], List[Dict[str, torch.Tensor]]]:
+    batch: Dict[str, torch.Tensor],
+) -> Iterable[Tuple[List[int], List[Dict[str, torch.Tensor]]]]:
     """Trims padding off all examples in batch.
 
     Args:
@@ -136,16 +136,14 @@ def _trim_batch(
     Returns:
         A tuple with unpadded lengths of examples and a list of each trimmed example from the batch.
     """
-    from tqdm import tqdm
-
     # Cut everything down to size
-    sizes, trimmed_examples = [], []
-    for batch in tqdm(batches):
-        for idx in range(batch['attention_mask'].shape[0]):
-            size, trimmed_example = _extract_trim_batch_idx(batch, idx)
-            sizes.append(size)
-            trimmed_examples.append(trimmed_example)
-    return sizes, trimmed_examples
+    # sizes, trimmed_examples = [], []
+    for idx in range(batch['attention_mask'].shape[0]):
+        size, trimmed_example = _extract_trim_batch_idx(batch, idx)
+        yield size, trimmed_example
+    #     sizes.append(size)
+    #     trimmed_examples.append(trimmed_example)
+    # return sizes, trimmed_examples
 
 
 def _extract_trim_batch_idx(batch: Dict[str, torch.Tensor],
@@ -471,36 +469,32 @@ def profile_packing(
             raw_batch_sizes.append(raw_batch_size)
 
     n_profile_examples = max(raw_batch_sizes) * 100
-    batch_size = n_profile_examples // 100
-    n_iters = n_profile_examples // batch_size
+    # batch_size = n_profile_examples // 100
+    # n_iters = n_profile_examples // batch_size
 
     train_dataspec = build_dataloader(
         dataloader_cfg,
         tokenizer,
-        batch_size,
+        n_profile_examples,
     )
     train_dataloader = train_dataspec.dataloader
 
     log.debug("Getting iter")
     dl_iter = iter(train_dataloader)
 
-    log.debug("Getting big batch in parts")
-    batches = []
-    from tqdm import tqdm
-    for i in tqdm(range(n_iters)):
-        partial_batch = next(dl_iter)
-        if dist.get_local_rank() == 0:
-            batches.append(partial_batch)
-
     # Get a bunch of raw examples
     if dist.get_local_rank() == 0:
+        log.debug("Getting big batch")
+        big_batch = next(dl_iter)
+
         # Cut everything down to size
         log.debug("Trimming big batch")
-        sizes, trimmed_examples = _trim_batch(batches)
+        trimmed_iter = _trim_batch(big_batch)
+        log.debug("Trimmed")
 
         def profile(raw_batch_size: int) -> Tuple[Optional[float], Optional[float]]:
             # Copy trimmed examples so that the dicts are not shared between profiling runs.
-            trimmed_examples_copy = [te.copy() for te in trimmed_examples]
+            # trimmed_examples_copy = [te.copy() for te in trimmed_examples]
 
             # Create the packing collator.
             packer = BinPackCollator(
@@ -512,14 +506,22 @@ def profile_packing(
                 max_leftover_bins_to_keep=max_leftovers_to_keep,
             )
 
+            current_batch = []
+            current_sizes = []
             # Simulate feeding the packing collator a bunch of data
-            for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
-                batch = trimmed_examples_copy[idx:idx + raw_batch_size]
+            # for idx in range(0, len(trimmed_examples_copy), raw_batch_size):
+            for (size, trimmed_example) in trimmed_iter:
+                if len(current_batch) < raw_batch_size:
+                    current_batch.append(trimmed_example)
+                    current_sizes.append(size)
+                    continue
+
+                batch = current_batch
                 if len(batch) < device_batch_size:
                     continue
                 packer._pack_trimmed_examples(
                     batch,
-                    sizes[idx:idx + raw_batch_size],
+                    current_sizes,
                 )
 
             if packer.n_packed_examples == 0:
