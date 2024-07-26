@@ -478,9 +478,11 @@ def profile_packing(
 
     # Get a bunch of raw examples
     if dist.get_local_rank() == 0:
+        log.debug("Getting big batch")
         big_batch = next(iter(train_dataloader))
 
         # Cut everything down to size
+        log.debug("Trimming big batch")
         sizes, trimmed_examples = _trim_batch(big_batch)
 
         def profile(raw_batch_size: int) -> Tuple[Optional[float], Optional[float]]:
