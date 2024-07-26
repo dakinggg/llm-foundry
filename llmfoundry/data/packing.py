@@ -376,17 +376,17 @@ def auto_packing_ratio(
             if waste is None or waste > 0:
                 break
             packing_ratio = packing_ratio_candidate
+    else:
+        packing_ratio = 10000000000
 
     # Select the minimum packing ratio across all ranks.
-    # if dist.is_available() and dist.is_initialized():
-    #     device = get_device(None)
-    #     packing_ratio_tensor = device.tensor_to_device(
-    #         torch.tensor(packing_ratio),
-    #     )
-    #     dist.all_reduce(packing_ratio_tensor, reduce_operation='MIN')
-    #     packing_ratio = packing_ratio_tensor.item()
-
-    dist.barrier()
+    if dist.is_available() and dist.is_initialized():
+        device = get_device(None)
+        packing_ratio_tensor = device.tensor_to_device(
+            torch.tensor(packing_ratio),
+        )
+        dist.all_reduce(packing_ratio_tensor, reduce_operation='MIN')
+        packing_ratio = packing_ratio_tensor.item()
 
     # Restore rng state.
     reproducibility.load_rng_state(rng_state)
