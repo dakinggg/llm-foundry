@@ -357,16 +357,19 @@ def auto_packing_ratio(
     if max_seq_len <= 100:
         return 1
 
-    min_ratio = 1
-    max_ratio = max_seq_len / 100
-    profiling_results = profile_packing(
-        dataloader_cfg=dataloader_cfg,
-        tokenizer=tokenizer,
-        min_ratio=min_ratio,
-        max_ratio=max_ratio,
-        num_packing_ratios=num_packing_ratios,
-        device_batch_size=device_batch_size,
-    )
+    if dist.get_local_rank() == 0:
+        min_ratio = 1
+        max_ratio = max_seq_len / 100
+        profiling_results = profile_packing(
+            dataloader_cfg=dataloader_cfg,
+            tokenizer=tokenizer,
+            min_ratio=min_ratio,
+            max_ratio=max_ratio,
+            num_packing_ratios=num_packing_ratios,
+            device_batch_size=device_batch_size,
+        )
+    
+    dist.barrier()
 
     # Obtain the maximum packing_ratio/minimum padding that has no waste.
     # profiling_results are sorted from smallest to largest packing_ratio.
@@ -377,13 +380,13 @@ def auto_packing_ratio(
         packing_ratio = packing_ratio_candidate
 
     # Select the minimum packing ratio across all ranks.
-    if dist.is_available() and dist.is_initialized():
-        device = get_device(None)
-        packing_ratio_tensor = device.tensor_to_device(
-            torch.tensor(packing_ratio),
-        )
-        dist.all_reduce(packing_ratio_tensor, reduce_operation='MIN')
-        packing_ratio = packing_ratio_tensor.item()
+    # if dist.is_available() and dist.is_initialized():
+    #     device = get_device(None)
+    #     packing_ratio_tensor = device.tensor_to_device(
+    #         torch.tensor(packing_ratio),
+    #     )
+    #     dist.all_reduce(packing_ratio_tensor, reduce_operation='MIN')
+    #     packing_ratio = packing_ratio_tensor.item()
 
     # Restore rng state.
     reproducibility.load_rng_state(rng_state)
