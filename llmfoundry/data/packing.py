@@ -490,14 +490,13 @@ def profile_packing(
         log.debug("Getting big batch")
         big_batch = next(dl_iter)
 
-        # Cut everything down to size
-        log.debug("Trimming big batch")
-        trimmed_iter = _trim_batch(big_batch)
-        log.debug("Trimmed")
-
         def profile(raw_batch_size: int) -> Tuple[Optional[float], Optional[float]]:
             # Copy trimmed examples so that the dicts are not shared between profiling runs.
             # trimmed_examples_copy = [te.copy() for te in trimmed_examples]
+            # Cut everything down to size
+            log.debug("Trimming big batch")
+            trimmed_iter = _trim_batch(big_batch)
+            log.debug("Trimmed")
 
             # Create the packing collator.
             packer = BinPackCollator(
