@@ -63,6 +63,9 @@ class HuggingFaceModelWithFSDP(HuggingFaceModel):
             batch = {
                 k: v for k, v in batch.items() if k in self.model_forward_args
             }
+            print(batch)
+            print(batch['input_ids'].shape)
+            print(batch['attention_mask'].shape)
             output = self.model(**batch)  # type: ignore (thirdparty)
         else:
             raise ValueError(
