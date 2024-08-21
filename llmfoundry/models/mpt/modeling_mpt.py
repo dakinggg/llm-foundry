@@ -1349,6 +1349,8 @@ def compute_loss_from_logits(
         for i in range(2048):
             i_loss = losses[i]
             i_target = targets[0][i]
+            if i_target == -100:
+                continue
             i_seq_id = int(batch['sequence_id'][0][i])
             i_input_id = batch['input_ids'][0][i]
             if i_seq_id not in seq_id_losses:
