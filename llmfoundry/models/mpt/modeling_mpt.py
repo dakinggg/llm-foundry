@@ -1330,7 +1330,7 @@ def compute_loss_from_logits(
     labels: torch.Tensor,
     loss_fn: nn.Module,
     sample_weighing_factor: Optional[torch.Tensor] = None,
-    batch,
+    batch = None,
 ) -> torch.Tensor:
     targets = get_targets(labels) if shift_labels else labels
 
