@@ -1348,8 +1348,9 @@ def compute_loss_from_logits(
             i_loss = losses[i]
             i_target = targets[0][i]
             i_seq_id = batch['sequence_id'][0][i]
+            i_input_id = batch['input_ids'][0][i]
             if i_loss != 0:
-                print(f"i: {i}, i_loss: {i_loss}, i_target: {i_target}, i_seq_id: {i_seq_id}")
+                print(f"i: {i}, i_loss: {i_loss}, i_target: {i_target}, i_seq_id: {i_seq_id}, i_input_id: {i_input_id}")
         if sample_weighing_factor is not None:
             if sample_weighing_factor.shape[0] > 1:
                 raise ValueError(
