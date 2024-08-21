@@ -1330,6 +1330,7 @@ def compute_loss_from_logits(
     labels: torch.Tensor,
     loss_fn: nn.Module,
     sample_weighing_factor: Optional[torch.Tensor] = None,
+    batch,
 ) -> torch.Tensor:
     targets = get_targets(labels) if shift_labels else labels
 
@@ -1343,6 +1344,12 @@ def compute_loss_from_logits(
     else:
         loss = losses.sum() / (targets != loss_fn.ignore_index).sum()
         print(f"losses: {losses}, loss: {loss}, targets: {(targets != loss_fn.ignore_index).sum()}")
+        for i in range(2048):
+            i_loss = losses[i]
+            i_target = targets[0][i]
+            i_seq_id = batch['sequence_id'][0][i]
+            if i_loss != 0:
+                print(f"i: {i}, i_loss: {i_loss}, i_target: {i_target}, i_seq_id: {i_seq_id}")
         if sample_weighing_factor is not None:
             if sample_weighing_factor.shape[0] > 1:
                 raise ValueError(
@@ -1457,6 +1464,7 @@ class ComposerMPTCausalLM(HuggingFaceModel):
             batch['labels'],
             self.loss_fn,
             batch.get('sample_weighing_factor', None),
+            batch,
         )
 
         if self.config.ffn_config['ffn_type'] in ffns_with_megablocks:
