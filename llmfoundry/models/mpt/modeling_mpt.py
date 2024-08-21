@@ -1344,13 +1344,25 @@ def compute_loss_from_logits(
     else:
         loss = losses.sum() / (targets != loss_fn.ignore_index).sum()
         print(f"losses: {losses}, loss: {loss}, targets: {(targets != loss_fn.ignore_index).sum()}")
+        seq_id_losses = {}
+        seq_id_counts = {}
         for i in range(2048):
             i_loss = losses[i]
             i_target = targets[0][i]
             i_seq_id = batch['sequence_id'][0][i]
             i_input_id = batch['input_ids'][0][i]
-            if i_loss != 0:
-                print(f"i: {i}, i_loss: {i_loss}, i_target: {i_target}, i_seq_id: {i_seq_id}, i_input_id: {i_input_id}")
+            if i_seq_id not in seq_id_losses:
+                seq_id_losses[i_seq_id] = 0
+            seq_id_losses[i_seq_id] += i_loss
+            if i_seq_id not in seq_id_counts:
+                seq_id_counts[i_seq_id] = 0
+            seq_id_counts[i_seq_id] += 1
+            # if i_loss != 0:
+            #     print(f"i: {i}, i_loss: {i_loss}, i_target: {i_target}, i_seq_id: {i_seq_id}, i_input_id: {i_input_id}")
+
+        for seq_id, seq_loss in seq_id_losses.items():
+            print(f"seq_id: {seq_id}, seq_loss: {seq_loss}, seq_count: {seq_id_counts[seq_id]}, seq_avg_loss: {seq_loss / seq_id_counts[seq_id]}")
+
         if sample_weighing_factor is not None:
             if sample_weighing_factor.shape[0] > 1:
                 raise ValueError(
