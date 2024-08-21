@@ -86,6 +86,7 @@ class BinPackCollator:
         self,
         examples: list[dict[str, torch.Tensor]],
     ) -> dict[str, torch.Tensor]:
+        print(f"Collating: {len(examples)}")
         batch = self.base_collator(examples)
         return self.pack(batch)
 
