@@ -87,8 +87,10 @@ class BinPackCollator:
         examples: list[dict[str, torch.Tensor]],
     ) -> dict[str, torch.Tensor]:
         batch = self.base_collator(examples)
-        print(f"Collating: {len(examples)}, Batch rows: {batch['input_ids'].shape[0]}, Padding count: {batch['attention_mask'].sum()}")
-        return self.pack(batch)
+        print(f"Collating1: {len(examples)}, Batch rows: {batch['input_ids'].shape[0]}, Padding count: {batch['attention_mask'].sum()}")
+        packed = self.pack(batch)
+        print(f"Collating2: {len(examples)}, Batch rows: {packed['input_ids'].shape[0]}, Padding count: {packed['attention_mask'].sum()}")
+        return packed
 
     def pack(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         if self._is_profiling:
