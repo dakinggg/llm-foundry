@@ -1342,6 +1342,7 @@ def compute_loss_from_logits(
         loss = losses.sum()
     else:
         loss = losses.sum() / (targets != loss_fn.ignore_index).sum()
+        print(f"losses: {losses}, loss: {loss}, targets: {(targets != loss_fn.ignore_index).sum()}")
         if sample_weighing_factor is not None:
             if sample_weighing_factor.shape[0] > 1:
                 raise ValueError(
