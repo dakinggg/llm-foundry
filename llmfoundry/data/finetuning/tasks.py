@@ -319,10 +319,14 @@ def _tokenize_with_bos_removal(
     )
 
     # Remove the BOS token from the start of the labels if it was automatically added
-    if hasattr(tokenizer, 'add_bos_token') and tokenizer.add_bos_token:
-        if tokenizer.bos_token_id is not None and tokenized_sample['labels'][
-            0] == tokenizer.bos_token_id:
-            tokenized_sample['labels'] = tokenized_sample['labels'][1:]
+    has_bos_token = hasattr(tokenizer, 'bos_token_id') and tokenizer.bos_token_id is not None
+    input_ids_starts_with_bos = False
+    labels_starts_with_bos = False
+    if has_bos_token:
+        input_ids_starts_with_bos = tokenized_sample['input_ids'][0] == tokenizer.bos_token_id
+        labels_starts_with_bos = tokenized_sample['labels'][0] == tokenizer.bos_token_id
+    if input_ids_starts_with_bos and labels_starts_with_bos:
+        tokenized_sample['labels'] = tokenized_sample['labels'][1:]
 
     return tokenized_sample
 
