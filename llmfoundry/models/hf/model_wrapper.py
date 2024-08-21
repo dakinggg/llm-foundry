@@ -64,6 +64,7 @@ class HuggingFaceModelWithFSDP(HuggingFaceModel):
                 k: v for k, v in batch.items() if k in self.model_forward_args
             }
             output = self.model(**batch)  # type: ignore (thirdparty)
+            print(f"loss: {output['loss']}, targets: {(batch['labels'] != -100).sum()}")
         else:
             raise ValueError(
                 'Unexpected batch type. Expected a dictionary with keys corresponding to the inputs to the forward function of the Huggingface model',
