@@ -150,9 +150,9 @@ def stitch_turns_decoder_only(
         context = ensure_list(turn['input_ids'])
         target = ensure_list(turn['labels'])
         # If an EOS token id is given, ensure that the target sequence ends with it.
-        # if is_last_turn and eos_token_id is not None:
-        #     if target[-1] != eos_token_id:
-        #         target = target + [eos_token_id]
+        if is_last_turn and eos_token_id is not None:
+            if target[-1] != eos_token_id:
+                target = target + [eos_token_id]
         # Extend the input_ids
         input_ids += context
         input_ids += target
