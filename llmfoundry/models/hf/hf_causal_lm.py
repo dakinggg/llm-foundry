@@ -32,28 +32,35 @@ class ComposerHFCausalLM(BaseHuggingFaceModel):
     """Configures a :class:`.HuggingFaceModel` around a Causal LM.
 
     Args:
+        tokenizer (PreTrainedTokenizer): The tokenizer that the model will use.
         pretrained_model_name_or_path (str): The name of or local path to
             the HF Causal LM (e.g., `gpt2` to instantiate a GPT2LMHeadModel).
-        config_overrides (dict, optional): An optional dictionary of keyword
-            arguments that override the default configuration associated with
-            cfg.pretrained_model_name_or_path.
         pretrained (bool): Whether to instantiate the model with pre-trained
             weights coming from cfg.pretrained_model_name_or_path. If ``True``,
             cfg.config_overrides must be compatible with the pre-trained weights.
-        init_device ('cpu' | 'meta'): Which device, 'cpu' or 'meta', to
-            initialize the model on. Currently, `meta` is only supported when
-            cfg.pretrained is ``False``. Default: ``'cpu'``.
-        peft_config (dict, optional): An optional dictionary of keyword arguments to be
-            passed to the PeftConfig constructor. If provided, the model will be wrapped in a PeftModel.
+        pretrained_lora_id_or_path (str, optional): The name of or local path to
+            the LoRA model to load.
         trust_remote_code (bool, optional): Whether to trust remote code when loading from Hugging Face
             Hub. Default: ``True``.
         use_auth_token (bool, optional): Whether to use the Hugging Face authentication token when
             loading from Hugging Face Hub. Default: ``False``.
-        use_train_metrics (bool, optional): Whether to use training metrics. Default: ``True``.
-        load_in_8bit (bool, optional): Whether to load the model in 8-bit mode. Default: ``False``.
-        init_device (str, optional): Which device to initialize the model on. Default: ``'cpu'``.
         use_flash_attention_2 (bool, optional): Whether to use flash-attention 2. Default: ``False``.
-        tokenizer (PreTrainedTokenizer): The tokenizer that the model will use.
+        load_in_8bit (bool, optional): Whether to load the model in 8-bit mode. Default: ``False``.
+        init_device ('cpu' | 'meta'): Which device, 'cpu' or 'meta', to
+            initialize the model on. Currently, `meta` is only supported when
+            cfg.pretrained is ``False``. Default: ``'cpu'``.
+        config_overrides (dict, optional): An optional dictionary of keyword
+            arguments that override the default configuration associated with
+            cfg.pretrained_model_name_or_path.
+        peft_config (dict, optional): An optional dictionary of keyword arguments to be
+            passed to the PeftConfig constructor. If provided, the model will be wrapped in a PeftModel.
+        use_train_metrics (bool, optional): Whether to use training metrics. Default: ``True``.
+        allow_embedding_resizing (bool, optional): Whether to allow resizing the model's embeddings.
+            Default: ``False``.
+        additional_train_metrics (list, optional): Additional training metrics to use.
+        additional_eval_metrics (list, optional): Additional evaluation metrics to use.
+        should_save_peft_only (bool, optional): Whether to save only the Peft model. Default: ``True``.
+        apply_liger (bool, optional): Whether to apply the liger kernels to the model. Default: ``False``.
     """
 
     model_cls: Union[_BaseAutoModelClass,
@@ -79,6 +86,7 @@ class ComposerHFCausalLM(BaseHuggingFaceModel):
         additional_train_metrics: Optional[list] = None,
         additional_eval_metrics: Optional[list] = None,
         should_save_peft_only: bool = True,
+        apply_liger: bool = False,
     ):
         super().__init__(
             pretrained_model_name_or_path,
@@ -98,4 +106,5 @@ class ComposerHFCausalLM(BaseHuggingFaceModel):
             additional_train_metrics=additional_train_metrics,
             additional_eval_metrics=additional_eval_metrics,
             should_save_peft_only=should_save_peft_only,
+            apply_liger=apply_liger,
         )

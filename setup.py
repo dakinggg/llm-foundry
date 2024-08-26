@@ -122,6 +122,10 @@ extra_deps['megablocks'] = [
     'grouped-gemm==0.1.4',
 ]
 
+extra_deps['liger'] = [
+    'liger-kernel<0.2.0',
+]
+
 extra_deps['databricks-serverless'] = {
     dep for key, deps in extra_deps.items() for dep in deps
     if 'gpu' not in key and 'megablocks' not in key and
@@ -129,7 +133,7 @@ extra_deps['databricks-serverless'] = {
 }
 extra_deps['all-cpu'] = {
     dep for key, deps in extra_deps.items() for dep in deps
-    if 'gpu' not in key and 'megablocks' not in key
+    if 'gpu' not in key and 'megablocks' not in key and 'liger' not in key
 }
 extra_deps['all'] = {
     dep for key, deps in extra_deps.items() for dep in deps

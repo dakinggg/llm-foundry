@@ -33,6 +33,13 @@ from llmfoundry.models.layers.attention import is_flash_v2_installed
 from llmfoundry.models.utils import init_empty_weights
 from llmfoundry.utils.config_utils import set_config_overrides
 
+try:
+    import liger_kernel
+    _LIGER_INSTALLED = True
+except ImportError:
+    liger_kernel = None
+    _LIGER_INSTALLED = False
+
 if TYPE_CHECKING:
     from peft import PeftConfig, PeftModel
 
@@ -48,6 +55,39 @@ class BaseHuggingFaceModel(HuggingFaceModel):
     """Wrapper around HuggingFaceModel.
 
     Base class for HuggingFace based models.
+
+    Args:
+        pretrained_model_name_or_path (str): The name of or local path to
+            the HF Causal LM (e.g., `gpt2` to instantiate a GPT2LMHeadModel).
+        tokenizer (PreTrainedTokenizer): The tokenizer that the model will use.
+        pretrained (bool): Whether to instantiate the model with pre-trained
+            weights coming from cfg.pretrained_model_name_or_path. If ``True``,
+            cfg.config_overrides must be compatible with the pre-trained weights.
+        pretrained_lora_id_or_path (str, optional): The name of or local path to
+            the LoRA model to load.
+        trust_remote_code (bool, optional): Whether to trust remote code when loading from Hugging Face
+            Hub. Default: ``True``.
+        use_auth_token (bool, optional): Whether to use the Hugging Face authentication token when
+            loading from Hugging Face Hub. Default: ``False``.
+        use_flash_attention_2 (bool, optional): Whether to use flash-attention 2. Default: ``False``.
+        load_in_8bit (bool, optional): Whether to load the model in 8-bit mode. Default: ``False``.
+        init_device ('cpu' | 'meta'): Which device, 'cpu' or 'meta', to
+            initialize the model on. Currently, `meta` is only supported when
+            cfg.pretrained is ``False``. Default: ``'cpu'``.
+        config_overrides (dict, optional): An optional dictionary of keyword
+            arguments that override the default configuration associated with
+            cfg.pretrained_model_name_or_path.
+        use_logits (bool, optional): Whether to use logits for loss calculation. Default: ``True``.
+        shift_labels (bool, optional): Whether to shift the labels for loss calculation. Default: ``False``.
+        peft_config (dict, optional): An optional dictionary of keyword arguments to be
+            passed to the PeftConfig constructor. If provided, the model will be wrapped in a PeftModel.
+        use_train_metrics (bool, optional): Whether to use training metrics. Default: ``True``.
+        allow_embedding_resizing (bool, optional): Whether to allow resizing the model's embeddings.
+            Default: ``False``.
+        additional_train_metrics (list, optional): Additional training metrics to use.
+        additional_eval_metrics (list, optional): Additional evaluation metrics to use.
+        should_save_peft_only (bool, optional): Whether to save only the Peft model. Default: ``True``.
+        apply_liger (bool, optional): Whether to apply the liger kernels to the model. Default: ``False``.
     """
 
     model_cls: Union[_BaseAutoModelClass,
@@ -75,8 +115,22 @@ class BaseHuggingFaceModel(HuggingFaceModel):
         additional_train_metrics: Optional[list] = None,
         additional_eval_metrics: Optional[list] = None,
         should_save_peft_only: bool = True,
+        apply_liger: bool = False,
     ):
         config_overrides = config_overrides or {}
+
+        if apply_liger:
+            if not _LIGER_INSTALLED:
+                raise ValueError(
+                    'Liger is not installed, but apply_liger was set to True. Please install LLM Foundry with the liger extra to use apply_liger.',
+                )
+
+            from liger_kernel.transformers import (
+                apply_liger_kernel_to_llama, apply_liger_kernel_to_mistral,
+                apply_liger_kernel_to_mixtral,)
+            apply_liger_kernel_to_llama()
+            apply_liger_kernel_to_mistral()
+            apply_liger_kernel_to_mixtral()
 
         model = self.build_inner_model(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
