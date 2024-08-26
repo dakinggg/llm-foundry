@@ -128,7 +128,7 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             from liger_kernel.transformers import (
                 apply_liger_kernel_to_llama, apply_liger_kernel_to_mistral,
                 apply_liger_kernel_to_mixtral,)
-            apply_liger_kernel_to_llama()
+            apply_liger_kernel_to_llama(cross_entropy=True, fused_linear_cross_entropy=False)
             apply_liger_kernel_to_mistral()
             apply_liger_kernel_to_mixtral()
 
