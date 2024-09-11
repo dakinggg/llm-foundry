@@ -90,9 +90,33 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             pretrained=pretrained,
         )
 
+        print("+"*30)
+        print(model.config.tie_word_embeddings)
+        print(id(model.lm_head.weight))
+        print(id(model.model.embed_tokens))
+        print(model.model.embed_tokens.weight)
+        print(model.lm_head.weight)
+        print("+"*30)
+
         model = self.transform_model(model)
 
+        print("+"*30)
+        print(model.config.tie_word_embeddings)
+        print(id(model.lm_head.weight))
+        print(id(model.model.embed_tokens))
+        print(model.model.embed_tokens.weight)
+        print(model.lm_head.weight)
+        print("+"*30)
+
         self.prepare_inner_model(model, init_device)
+
+        print("+"*30)
+        print(model.config.tie_word_embeddings)
+        print(id(model.lm_head.weight))
+        print(id(model.model.embed_tokens))
+        print(model.model.embed_tokens.weight)
+        print(model.lm_head.weight)
+        print("+"*30)
 
         metrics, eval_metrics = self.build_metrics(
             use_train_metrics=use_train_metrics,
@@ -120,6 +144,14 @@ class BaseHuggingFaceModel(HuggingFaceModel):
             peft_config=peft_config_object,
             should_save_peft_only=should_save_peft_only,
         )
+
+        print("+"*30)
+        print(self.model.config.tie_word_embeddings)
+        print(id(self.model.lm_head.weight))
+        print(id(self.model.model.embed_tokens))
+        print(self.model.model.embed_tokens.weight)
+        print(self.model.lm_head.weight)
+        print("+"*30)
 
     def loss(self, outputs: ModelOutput, batch: Mapping):
         if self.config.use_return_dict:
@@ -332,6 +364,14 @@ class BaseHuggingFaceModel(HuggingFaceModel):
                     attn_implementation=requested_attention_implementation,
                     config=config,
                 )
+
+                print("+"*30)
+                print(model.config.tie_word_embeddings)
+                print(id(model.lm_head.weight))
+                print(id(model.model.embed_tokens))
+                print(model.model.embed_tokens.weight)
+                print(model.lm_head.weight)
+                print("+"*30)
             else:
                 model = auto_model_cls.from_config(
                     config,
