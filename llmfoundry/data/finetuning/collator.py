@@ -399,6 +399,7 @@ class Seq2SeqFinetuningCollator:
         batch['input_ids'] = batch['input_ids'].to(torch.int32)
 
         batch['sequence_id'] = batch['attention_mask'] - 1
+        batch['attention_mask'] = batch['attention_mask'].bool()
 
         # This logic prevents trimming on at least the first batch
         if not (self._allow_pad_trimming and self._seen_first_batch):
