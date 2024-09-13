@@ -396,6 +396,7 @@ class Seq2SeqFinetuningCollator:
             max_length=max_seq_len,
             return_tensors='pt',
         )
+        batch['input_ids'] = batch['input_ids'].to(torch.int32)
 
         batch['sequence_id'] = batch['attention_mask'] - 1
 
