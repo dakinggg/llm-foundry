@@ -521,7 +521,14 @@ class HuggingFaceCheckpointer(Callback):
 
         cpu_offload = True
 
+        for param in state.model.parameters():
+            if param.grad is not None:
+                param.grad.detach_()
+                param.grad = None
+
         import gc
+        gc.collect()
+        torch.cuda.empty_cache()
         gc.collect()
 
         # Add hook to move tensors to cpu to avoid CUDA OOM
