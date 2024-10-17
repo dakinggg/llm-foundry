@@ -521,6 +521,9 @@ class HuggingFaceCheckpointer(Callback):
 
         cpu_offload = True
 
+        import gc
+        gc.collect()
+
         # Add hook to move tensors to cpu to avoid CUDA OOM
         def tensor_hook(
             module: nn.Module,
