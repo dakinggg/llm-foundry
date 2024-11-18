@@ -785,9 +785,11 @@ class HuggingFaceCheckpointer(Callback):
         if dist.get_global_rank() == 0:
             if register_to_mlflow:
                 assert new_model_instance is not None
+                print("TRANSFORMING")
                 new_model_instance = self.transform_model_pre_registration(
                     new_model_instance,
                 )
+                print(self.using_peft)
                 if self.using_peft:
 
                     # Save and register peft model to mlflow, this code path uses our older two step logic
