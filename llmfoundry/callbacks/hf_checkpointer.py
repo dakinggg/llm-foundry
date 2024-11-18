@@ -243,6 +243,7 @@ def _register_model_with_run_id_multiprocess(
 
 
 class HuggingFaceCheckpointer(Callback):
+    IAMHERE = True
     """Save a huggingface formatted checkpoint during training.
 
     Args:
