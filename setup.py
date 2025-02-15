@@ -55,10 +55,10 @@ install_requires = [
     'mosaicml[libcloud,wandb,oci,gcs,mlflow]>=0.28.0,<0.29',
     'mlflow>=2.14.1,<2.19',
     'accelerate>=0.25,<1.4',  # for HF inference `device_map`
-    'transformers>=4.48.3,<4.49',
+    'transformers>=4.43.2,<4.47',
     'mosaicml-streaming>=0.11.0,<0.12',
     'torch>=2.5.1,<2.5.2',
-    'datasets>=3.3,<3.4',
+    'datasets>=2.20.0,<3.3',
     'fsspec==2023.6.0',  # newer version results in a bug in datasets that duplicates data
     'sentencepiece==0.2.0',
     'einops==0.8.0',
@@ -68,7 +68,7 @@ install_requires = [
     'onnx==1.17.0',
     'onnxruntime==1.19.2',
     'boto3>=1.21.45,<2',
-    'huggingface-hub>=0.28.1,<0.29',
+    'huggingface-hub>=0.19.0,<0.27',
     'beautifulsoup4>=4.12.2,<5',  # required for model download utils
     'tenacity>=8.2.3,<10',
     'catalogue>=2,<3',
