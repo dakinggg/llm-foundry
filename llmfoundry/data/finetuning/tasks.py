@@ -999,6 +999,9 @@ class DatasetConstructor:
             if len(dataset) < num_proc:
                 num_proc = 1
 
+            hf_datasets.disable_progress_bars()
+            hf_datasets.logging.set_verbosity_info()
+
             columns_to_remove = list(dataset[0].keys())
             tokenized_dataset = dataset.map(
                 dataset_mapper,
@@ -1019,6 +1022,9 @@ class DatasetConstructor:
                 num_proc=num_proc,
                 desc='Filtering out long prompts',
             )
+
+            hf_datasets.enable_progress_bars()
+            hf_datasets.logging.set_verbosity_warning()
 
             examples_removed = len(tokenized_dataset) - len(filtered_dataset)
             if examples_removed > 0:
