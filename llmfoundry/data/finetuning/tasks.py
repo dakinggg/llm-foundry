@@ -1000,7 +1000,7 @@ class DatasetConstructor:
                 num_proc = 1
 
             hf_datasets.disable_progress_bars()
-            hf_datasets.logging.set_verbosity_info()
+            hf_datasets.logging.set_verbosity_debug()
 
             columns_to_remove = list(dataset[0].keys())
             tokenized_dataset = dataset.map(
