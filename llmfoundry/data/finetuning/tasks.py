@@ -1009,6 +1009,7 @@ class DatasetConstructor:
                 remove_columns=columns_to_remove,
                 num_proc=num_proc,
                 desc='Tokenizing dataset',
+                writer_batch_size=100,
             )
 
             filtered_dataset = tokenized_dataset.filter(
@@ -1021,6 +1022,7 @@ class DatasetConstructor:
                 ),
                 num_proc=num_proc,
                 desc='Filtering out long prompts',
+                writer_batch_size=100,
             )
 
             hf_datasets.enable_progress_bars()
