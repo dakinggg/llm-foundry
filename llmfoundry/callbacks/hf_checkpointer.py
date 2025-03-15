@@ -18,7 +18,7 @@ from typing import Any, Optional, Sequence, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from composer.core import Callback, Event, State, Time, TimeUnit
+from composer.core import Callback, Event, Precision, State, Time, TimeUnit
 from composer.devices import Device
 from composer.loggers import Logger, MLFlowLogger
 from composer.models import HuggingFaceModel
@@ -47,6 +47,12 @@ from llmfoundry.models.utils import init_empty_weights
 from llmfoundry.utils.exceptions import StoragePermissionError
 from llmfoundry.utils.huggingface_hub_utils import \
     edit_files_for_hf_compatibility
+
+try:
+    import transformer_engine.pytorch as te
+    is_te_imported = True
+except ModuleNotFoundError:
+    is_te_imported = False
 
 log = logging.getLogger(__name__)
 
@@ -773,10 +779,17 @@ class HuggingFaceCheckpointer(Callback):
         if dist.get_global_rank() == 0:
             assert new_model_instance is not None
             if upload_to_save_folder:
-                new_model_instance.save_pretrained(
-                    temp_save_dir,
-                    max_shard_size='1GB',
+                # This context manager casts the TE extra state in io.BytesIO format to tensor format
+                # Needed for proper hf ckpt saving.
+                context_manager = te.onnx_export(
+                    True,
+                ) if is_te_imported and state.precision == Precision.AMP_FP8 else contextlib.nullcontext(
                 )
+                with context_manager:
+                    new_model_instance.save_pretrained(
+                        temp_save_dir,
+                        max_shard_size='1GB',
+                    )
                 if original_tokenizer is not None:
                     assert isinstance(
                         original_tokenizer,
