@@ -124,7 +124,7 @@ extra_deps['megablocks'] = [
 ]
 
 extra_deps['te'] = [
-    'transformer-engine[pytorch]>=2.1,<2.2',
+    'transformer-engine[pytorch]==1.13',
 ]
 
 extra_deps['databricks-serverless'] = {
