@@ -350,6 +350,9 @@ class HuggingFaceCheckpointer(Callback):
         # Temporary save directory used by child_processes.
         self.temp_save_dir = None
 
+        # Composer state object will be stashed here on init
+        self.state = None
+
     def run_event(self, event: Event, state: State, logger: Logger) -> None:
         # The interval scheduler handles only returning True for the appropriate events
         if state.get_elapsed_duration() is not None and self.check_interval(
@@ -368,6 +371,7 @@ class HuggingFaceCheckpointer(Callback):
                 not is_last_batch,
             )
         elif event == Event.INIT:
+            self.state = state
             if not isinstance(state.model, HuggingFaceModel):
                 raise ValueError(
                     f'`HuggingFaceCheckpointer` is only compatible with `HuggingFaceModel`s. '
