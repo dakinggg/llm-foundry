@@ -1194,7 +1194,7 @@ class MPTForCausalLM(MPTPreTrainedModel):
                 logits.view(-1, logits.size(-1)),
                 _labels.to(logits.device).view(-1),
             )
-
+        print(logits.dtype)
         return CausalLMOutputWithPast(
             loss=loss,
             logits=logits,
