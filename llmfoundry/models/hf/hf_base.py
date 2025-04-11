@@ -128,7 +128,7 @@ class BaseHuggingFaceModel(HuggingFaceModel):
         # architecture changes are completed
         self.prepare_inner_model(self.model, init_device)
 
-    def forward(*args, **kwargs):
+    def forward(self, *args, **kwargs):
         out = super().forward(*args, **kwargs)
         print(out.logits.dtype)
         return out
