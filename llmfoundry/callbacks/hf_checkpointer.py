@@ -710,7 +710,11 @@ class HuggingFaceCheckpointer(Callback):
                 log.debug(
                     f'Registering model to UC at {mlflow_logger.model_registry_prefix}.{self.mlflow_registered_model_name}',
                 )
-
+            
+            print("+"*30)
+            print(self.using_peft)
+            print(register_save_dir)
+            print("+"*30)
             # Save the monitor process to be restored after registering the model.
             with _monitor_process_saver(mlflow_logger):
                 process = SpawnProcess(
