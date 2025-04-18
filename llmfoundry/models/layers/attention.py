@@ -13,6 +13,7 @@ import transformers
 from einops import rearrange
 from packaging import version
 from torch import nn
+import torch.nn.functional as F
 
 from llmfoundry.layers_registry import (
     attention_classes,
@@ -97,6 +98,116 @@ def repeat_kv_for_gqa(hidden: torch.Tensor, n_rep: int) -> torch.Tensor:
 
     return hidden.reshape(b, s, kv_n_heads * n_rep, d)
 
+def torch_sdpa(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    n_heads: int,
+    kv_n_heads: int,
+    past_key_value: Optional[tuple[torch.Tensor, torch.Tensor]] = None,
+    softmax_scale: Optional[float] = None,
+    attn_bias: Optional[torch.Tensor] = None,
+    key_padding_mask: Optional[torch.Tensor] = None,
+    is_causal: bool = False,
+    dropout_p: float = 0.0,
+    training: bool = False,
+    needs_weights: bool = False,
+    attn_logit_softcapping: Optional[float] = None,
+    sliding_window_size: int = -1,
+) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor,
+                                                                torch.Tensor]]]:
+    
+    if attn_logit_softcapping is not None:
+        raise NotImplementedError(
+            'attn_logit_softcapping not implemented for sdpa attention.',
+        )
+
+    q = rearrange(query, 'b s (h d) -> b h s d', h=n_heads)
+    k = rearrange(key, 'b s (h d) -> b h s d', h=kv_n_heads)
+    v = rearrange(value, 'b s (h d) -> b h s d', h=kv_n_heads)
+
+    if past_key_value is not None:
+        if len(past_key_value) != 0:
+            k = torch.cat([past_key_value[0], k], dim=2)
+            v = torch.cat([past_key_value[1], v], dim=2)
+
+        past_key_value = (k, v)
+
+    b, _, s_q, _ = q.shape
+    s_k = k.size(-2)
+    use_gqa = kv_n_heads > 1 and kv_n_heads < n_heads
+
+    if attn_bias is not None:
+        # clamp to 0 necessary for torch 2.0 compile()
+        _s_q = max(0, attn_bias.size(2) - s_q)
+        _s_k = max(0, attn_bias.size(3) - s_k)
+        attn_bias = attn_bias[:, :, _s_q:, _s_k:]
+
+    min_val = torch.finfo(q.dtype).min
+
+    if key_padding_mask is not None:
+        if attn_bias is not None:
+            warnings.warn(
+                'Propagating key_padding_mask to the attention module ' +\
+                'and applying it within the attention module can cause ' +\
+                'unnecessary computation/memory usage. Consider integrating ' +\
+                'into attn_bias once and passing that to each attention ' +\
+                'module instead.',
+            )
+        attn_bias = attn_bias.masked_fill(
+            ~key_padding_mask.view((b, 1, 1, s_k)),
+            min_val,
+        )
+
+    if is_causal and (not s_q == 1):
+        s = max(s_q, s_k)
+        causal_mask = attn_bias.new_ones(s, s, dtype=torch.float32)
+        causal_mask = causal_mask.tril()
+        causal_mask = causal_mask.to(torch.bool)
+        causal_mask = ~causal_mask
+        causal_mask = causal_mask[-s_q:, -s_k:]
+        attn_bias = attn_bias.masked_fill(
+            causal_mask.view(1, 1, s_q, s_k),
+            min_val,
+        )
+
+    if sliding_window_size != -1:
+        window_mask = torch.ones((s_q, s_k),
+                                 dtype=torch.bool,
+                                 device=attn_bias.device)
+        if (not s_q == 1):
+            if s_q != s_k:
+                raise ValueError(
+                    'Number of queries should be equal to the number of keys.',
+                )
+            window_mask = torch.tril(
+                window_mask,
+                diagonal=sliding_window_size,
+            )
+            window_mask = torch.triu(
+                window_mask,
+                diagonal=-sliding_window_size,
+            )
+        else:
+            window_mask[:, :-(sliding_window_size + 1)] = False
+        window_mask = ~window_mask
+        attn_bias = attn_bias.masked_fill(
+            window_mask.view(1, 1, s_q, s_k),
+            min_val,
+        )
+
+    out = torch.nn.functional.scaled_dot_product_attention(
+        query=q,
+        key=k,
+        value=v,
+        attn_mask=attn_bias,
+        dropout_p=dropout_p,
+        is_causal=False,
+        scale=softmax_scale,
+        enable_gqa=use_gqa,
+    )
+
+    return out, None, past_key_value
 
 def scaled_multihead_dot_product_attention(
     query: torch.Tensor,
