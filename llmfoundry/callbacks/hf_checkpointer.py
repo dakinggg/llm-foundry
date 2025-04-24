@@ -205,15 +205,16 @@ def _log_model_with_multi_process(
         mlflow.set_registry_uri(mlflow_logger.model_registry_uri)
 
     register_model_path = f'{mlflow_logger.model_registry_prefix}.{registered_model_name}' if mlflow_logger.model_registry_prefix and registered_model_name else registered_model_name
-    mlflow_logger.log_model(
-        transformers_model=transformers_model,
-        flavor='transformers',
-        artifact_path=artifact_path,
-        registered_model_name=register_model_path,
-        run_id=mlflow_logger._run_id,
-        await_registration_for=await_registration_for,
-        **mlflow_logging_config,
-    )
+    with mlflow.start_run(run_id=mlflow_logger._run_id) as run:
+        mlflow_logger.log_model(
+            transformers_model=transformers_model,
+            flavor='transformers',
+            artifact_path=artifact_path,
+            registered_model_name=register_model_path,
+            run_id=run.info.run_id,
+            await_registration_for=await_registration_for,
+            **mlflow_logging_config,
+        )
 
 
 class HuggingFaceCheckpointer(Callback):
@@ -421,24 +422,24 @@ class HuggingFaceCheckpointer(Callback):
             self.using_peft = composer_model.using_peft
         elif event == Event.FIT_END:
             # Wait for all child processes spawned by the callback to finish.
-            # timeout = self.register_wait_seconds
-            # wait_start = time.time()
-            # while not self._all_register_processes_done(state.device):
-            #     wait_time = time.time() - wait_start
-            #     if wait_time > timeout:
-            #         raise TimeoutError(
-            #             f'Waited {wait_time} seconds for child processes to complete. Exceeded timeout of {timeout} seconds.',
-            #         )
-            #     time.sleep(2)
+            timeout = self.register_wait_seconds
+            wait_start = time.time()
+            while not self._all_register_processes_done(state.device):
+                wait_time = time.time() - wait_start
+                if wait_time > timeout:
+                    raise TimeoutError(
+                        f'Waited {wait_time} seconds for child processes to complete. Exceeded timeout of {timeout} seconds.',
+                    )
+                time.sleep(2)
 
-            # if self._any_register_processes_error(
-            #     state.device,
-            # ) and self.final_register_only:
-            #     log.error(
-            #         'An error occurred in one or more registration processes. The model should still be logged to'
-            #         +
-            #         'the Mlflow artifacts, but will need to be registered manually',
-            #     )
+            if self._any_register_processes_error(
+                state.device,
+            ) and self.final_register_only:
+                log.error(
+                    'An error occurred in one or more registration processes. The model should still be logged to'
+                    +
+                    'the Mlflow artifacts, but will need to be registered manually',
+                )
 
             # Clean up temporary save directory; all processes are done with it.
             if self.temp_save_dir is not None:
@@ -766,47 +767,34 @@ class HuggingFaceCheckpointer(Callback):
                     f'Registering model to UC at {mlflow_logger.model_registry_prefix}.{self.mlflow_registered_model_name}',
                 )
 
-            _log_model_with_multi_process(
-                mlflow_logger=mlflow_logger,
-                python_logging_level=logging.getLogger('llmfoundry').level,
-                transformers_model={
-                    'model': new_model_instance,
-                    'tokenizer': original_tokenizer,
-                } if self.using_peft else register_save_dir,
-                artifact_path='final_model_checkpoint',
-                pretrained_model_name=self.pretrained_model_name,
-                registered_model_name=self.mlflow_registered_model_name,
-                await_registration_for=self.register_wait_seconds,
-                mlflow_logging_config=self.mlflow_logging_config,
-            )
             # Save the monitor process to be restored after registering the model.
-            # with _monitor_process_saver(mlflow_logger):
-                # process = SpawnProcess(
-                #     target=_log_model_with_multi_process,
-                #     kwargs={
-                #         'mlflow_logger':
-                #             mlflow_logger,
-                #         'python_logging_level':
-                #             logging.getLogger('llmfoundry').level,
-                #         'transformers_model': {
-                #             'model': new_model_instance,
-                #             'tokenizer': original_tokenizer,
-                #         } if self.using_peft else register_save_dir,
-                #         'artifact_path':
-                #             'final_model_checkpoint',
-                #         'pretrained_model_name':
-                #             self.pretrained_model_name,
-                #         'registered_model_name':
-                #             self.mlflow_registered_model_name,
-                #         'await_registration_for':
-                #             3600,
-                #         'mlflow_logging_config':
-                #             self.mlflow_logging_config,
-                #     },
-                # )
+            with _monitor_process_saver(mlflow_logger):
+                process = SpawnProcess(
+                    target=_log_model_with_multi_process,
+                    kwargs={
+                        'mlflow_logger':
+                            mlflow_logger,
+                        'python_logging_level':
+                            logging.getLogger('llmfoundry').level,
+                        'transformers_model': {
+                            'model': new_model_instance,
+                            'tokenizer': original_tokenizer,
+                        } if self.using_peft else register_save_dir,
+                        'artifact_path':
+                            'final_model_checkpoint',
+                        'pretrained_model_name':
+                            self.pretrained_model_name,
+                        'registered_model_name':
+                            self.mlflow_registered_model_name,
+                        'await_registration_for':
+                            3600,
+                        'mlflow_logging_config':
+                            self.mlflow_logging_config,
+                    },
+                )
 
-                # process.start()
-                # self.register_processes.append(process)
+                process.start()
+                self.register_processes.append(process)
 
         # Save the temporary directory to be cleaned up later.
         if use_temp_dir:
