@@ -239,6 +239,9 @@ def train(cfg: DictConfig) -> Trainer:
         logging.getLogger('streaming').setLevel(
             train_cfg.python_log_level.upper(),
         )  # Streaming module
+        logging.getLogger('botocore').setLevel(
+            train_cfg.python_log_level.upper(),
+        )
 
     _initialize_dist_with_barrier(dist_timeout=train_cfg.dist_timeout)
 
